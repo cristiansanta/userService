@@ -3,6 +3,9 @@ package com.mindhub.userservice.service.impl;
 import com.mindhub.userservice.models.UserEntity;
 import com.mindhub.userservice.repository.UserRepository;
 import com.mindhub.userservice.service.UserService;
+import com.mindhub.userservice.utils.UserValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -11,22 +14,42 @@ import reactor.core.publisher.Mono;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
     @Autowired
     private UserRepository userRepository;
 
     @Override
     public Mono<UserEntity> getUserById(Long id) {
-        return userRepository.findById(id);
+        return userRepository.findById(id)
+                .doOnSubscribe(subscription -> logger.info("Retrieving user with id: {}", id))
+                .doOnSuccess(user -> {
+                    if (user != null) {
+                        logger.debug("Retrieved user: {}", user.getName());
+                    } else {
+                        logger.debug("No user found with id: {}", id);
+                    }
+                })
+                .doOnError(error -> logger.error("Error retrieving user with id {}: {}", id, error.getMessage()));
     }
 
     @Override
     public Flux<UserEntity> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findAll()
+                .doOnSubscribe(subscription -> logger.info("Retrieving all users"))
+                .doOnNext(user -> logger.debug("Retrieved user: {}", user.getName()))
+                .doOnComplete(() -> logger.info("Completed retrieving all users"))
+                .doOnError(error -> logger.error("Error retrieving users: {}", error.getMessage()));
     }
 
     @Override
     public Mono<UserEntity> createUser(UserEntity user) {
-        return userRepository.save(user);
+        return Mono.just(user)
+                .doOnNext(UserValidator::validateUser)
+                .flatMap(userRepository::save)
+                .doOnSubscribe(subscription -> logger.info("Creating new user"))
+                .doOnSuccess(savedUser -> logger.info("User created successfully: {}", savedUser.getName()))
+                .doOnError(error -> logger.error("Error creating user: {}", error.getMessage()));
     }
 
     @Override
@@ -36,12 +59,20 @@ public class UserServiceImpl implements UserService {
                     existingUser.setName(user.getName());
                     existingUser.setEmail(user.getEmail());
                     existingUser.setPassword(user.getPassword());
-                    return userRepository.save(existingUser);
-                });
+                    return Mono.just(existingUser)
+                            .doOnNext(UserValidator::validateUser)
+                            .flatMap(userRepository::save);
+                })
+                .doOnSubscribe(subscription -> logger.info("Updating user with id: {}", id))
+                .doOnSuccess(updatedUser -> logger.info("User updated successfully: {}", updatedUser.getName()))
+                .doOnError(error -> logger.error("Error updating user with id {}: {}", id, error.getMessage()));
     }
 
     @Override
     public Mono<Void> deleteUser(Long id) {
-        return userRepository.deleteById(id);
+        return userRepository.deleteById(id)
+                .doOnSubscribe(subscription -> logger.info("Deleting user with id: {}", id))
+                .doOnSuccess(v -> logger.info("User deleted successfully with id: {}", id))
+                .doOnError(error -> logger.error("Error deleting user with id {}: {}", id, error.getMessage()));
     }
 }
