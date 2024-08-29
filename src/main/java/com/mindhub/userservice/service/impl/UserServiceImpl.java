@@ -69,10 +69,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Mono<Void> deleteUser(Long id) {
-        return userRepository.deleteById(id)
+    public Mono<Boolean> deleteUser(Long id) {
+        return userRepository.findById(id)
+                .flatMap(user -> userRepository.delete(user).thenReturn(true))
+                .switchIfEmpty(Mono.just(false))
                 .doOnSubscribe(subscription -> logger.info("Deleting user with id: {}", id))
-                .doOnSuccess(v -> logger.info("User deleted successfully with id: {}", id))
+                .doOnSuccess(deleted -> {
+                    if (deleted) {
+                        logger.info("User deleted successfully with id: {}", id);
+                    } else {
+                        logger.info("User not found for deletion with id: {}", id);
+                    }
+                })
                 .doOnError(error -> logger.error("Error deleting user with id {}: {}", id, error.getMessage()));
     }
 }

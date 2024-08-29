@@ -1,5 +1,6 @@
 package com.mindhub.userservice.controller;
 
+import com.mindhub.userservice.handlers.ErrorResponse;
 import com.mindhub.userservice.models.UserEntity;
 import com.mindhub.userservice.service.UserService;
 import com.mindhub.userservice.handlers.NotFoundUser;
@@ -8,9 +9,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/users")
@@ -57,9 +61,19 @@ public class UserController {
     @ApiResponse(responseCode = "204", description = "Successful operation")
     @ApiResponse(responseCode = "404", description = "User not found")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteUser(@PathVariable Long id) {
+    public Mono<ResponseEntity<ErrorResponse>> deleteUser(@PathVariable Long id) {
         return userService.deleteUser(id)
-                .switchIfEmpty(Mono.error(new NotFoundUser(id)));
+                .map(deleted -> {
+                    if (deleted) {
+                        return ResponseEntity.noContent().<ErrorResponse>build();
+                    } else {
+                        ErrorResponse errorResponse = new ErrorResponse(
+                                HttpStatus.NOT_FOUND,
+                                "User with ID " + id + " not found",
+                                LocalDateTime.now()
+                        );
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+                    }
+                });
     }
 }

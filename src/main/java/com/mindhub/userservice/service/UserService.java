@@ -9,5 +9,5 @@ public interface UserService {
     Flux<UserEntity> getAllUsers();
     Mono<UserEntity> createUser(UserEntity user);
     Mono<UserEntity> updateUser(Long id, UserEntity user);
-    Mono<Void> deleteUser(Long id);
+    Mono<Boolean> deleteUser(Long id);
 }
