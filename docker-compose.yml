@@ -1,20 +1,20 @@
-version: '3.8'
+version: '3.8' # Versión de Docker Compose
 
-services:
-  postgres:
-    image: postgres:13
-    container_name: postgres_db
-    environment:
+services: # Definición de servicios
+  postgres: # Primer servicio: PostgreSQL
+    image: postgres:13 # Imagen a usar
+    container_name: postgres_db # Nombre del contenedor
+    environment: # Variables de entorno
       POSTGRES_DB: testdb
       POSTGRES_USER: csanta
       POSTGRES_PASSWORD: 9480
-    ports:
+    ports: # Mapeo de puertos
       - "5432:5432"
-    volumes:
+    volumes: # Definición de volúmenes
       - postgres_data:/var/lib/postgresql/data
       - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
-  pgadmin:
+  pgadmin:  # Segundo servicio: pgAdmin
     image: dpage/pgadmin4
     container_name: pgadmin
     environment:
@@ -25,5 +25,5 @@ services:
     depends_on:
       - postgres
 
-volumes:
+volumes: # Definición de volúmenes nombrados
   postgres_data:
