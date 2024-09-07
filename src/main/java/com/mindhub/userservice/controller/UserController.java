@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -65,5 +66,11 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> deleteUser(@PathVariable Long id) {
         return userService.deleteUser(id);
+    }
+    @GetMapping("/current")
+    public Mono<UserDTO> getCurrent(ServerWebExchange exchange) {
+        String username = exchange.getRequest().getHeaders().getFirst("username");
+        return userService.findByEmail(username)
+                .switchIfEmpty(Mono.error(new RuntimeException("User not found")));
     }
 }
